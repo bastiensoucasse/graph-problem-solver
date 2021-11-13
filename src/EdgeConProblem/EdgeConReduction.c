@@ -1,12 +1,20 @@
+/**
+ * @file EdgeConReduction.c
+ * @author Quentin Desire
+ * @author Iantsa Provost
+ * @author Bastien Soucasse
+ * 
+ * @brief TODO
+ */
 
 #include "EdgeConReduction.h"
 #include "Z3Tools.h"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 Z3_ast getVariableIsIthTranslator(Z3_context ctx, int node1, int node2, int number)
 {
