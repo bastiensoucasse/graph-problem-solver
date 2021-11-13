@@ -1,0 +1,23 @@
+graph SomeGraph{
+    q[color=green];
+    q2[color=green];
+    q3[color=green];
+    t[color=red];
+    t2[color=red];
+    z[color=red];
+    z2[color=red];
+    a[color=green];
+    b[color=green];
+    c[color=red];
+    q -- q2;
+    q -- q3;
+    q2 -- q3;
+    q -- t;
+    t -- t2;
+    q2 -- z2;
+    z -- z2;
+    z -- a;
+    t2 -- b;
+    q3 -- c;
+    c -- a;
+}

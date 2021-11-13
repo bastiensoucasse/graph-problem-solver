@@ -1,0 +1,15 @@
+graph Star{
+    center[color=green];
+    q1[color=green];
+    q2[color=red];
+    q3[color=green];
+    q4[color=red];
+    q5[color=red];
+    q6[color=green];
+    center -- q1;
+    center -- q2;
+    center -- q3;
+    center -- q4;
+    center -- q5;
+    center -- q6;
+}

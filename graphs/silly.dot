@@ -1,0 +1,8 @@
+graph B{
+    i[color=green];
+    f[color=red];
+    h[color=red];
+    r[color=green];
+    i -- f;
+    r -- h;
+}

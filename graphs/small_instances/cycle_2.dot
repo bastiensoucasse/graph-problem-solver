@@ -1,0 +1,15 @@
+strict graph A {
+	graph [name=A];
+	0	 [color=green];
+	1	 [color=green];
+	0 -- 1;
+	5	 [color=red];
+	0 -- 5;
+	2	 [color=green];
+	1 -- 2;
+	3	 [color=red];
+	2 -- 3;
+	4	 [color=red];
+	3 -- 4;
+	4 -- 5;
+}

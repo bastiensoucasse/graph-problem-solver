@@ -1,0 +1,13 @@
+graph Line{
+    q1[color=green];
+    q2[color=red];
+    q3[color=green];
+    q4[color=red];
+    q5[color=green];
+    q6[color=red];
+    q1 -- q2;
+    q2 -- q3;
+    q3 -- q4;
+    q4 -- q5;
+    q5 -- q6;
+}

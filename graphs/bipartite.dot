@@ -1,0 +1,26 @@
+graph Bipartite{
+    u1[color=green];
+    u2[color=red];
+    u3[color=red];
+    u4[color=green];
+    u5[color=green];
+    v1[color=green];
+    v2[color=green];
+    v3[color=green];
+    u1 -- u2;
+    u1 -- u3;
+    u1 -- u4;
+    u1 -- u5;
+    u2 -- u3;
+    u2 -- u4;
+    u2 -- u5;
+    u3 -- u4;
+    u3 -- u5;
+    u4 -- u5;
+    v1 -- u1;
+    v1 -- u3;
+    v2 -- u2;
+    v2 -- u4;
+    v3 -- u3;
+    v3 -- u5;
+}
