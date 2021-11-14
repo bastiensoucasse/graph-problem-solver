@@ -16,11 +16,11 @@
 #include <stdlib.h>
 
 /**
- * @brief 
+ * @brief Compare each depth, stock and then return the highest value.
  * 
- * @param numNodes 
- * @param depth 
- * @return int 
+ * @param numNodes Number of nodes in the EdgeConGraph.
+ * @param depth An array filled with depth of each nodes.
+ * @return the maximum of depth array.
  */
 static int computeMaxDepth(int numNodes, int depth[])
 {
@@ -34,11 +34,12 @@ static int computeMaxDepth(int numNodes, int depth[])
 }
 
 /**
- * @brief 
+ * @brief Browse neighbours of node u given and register the depth of each nodes (one depth per homogeneous components).
+ * Recursively loop on all the graph.
  * 
- * @param graph 
- * @param u 
- * @param depth 
+ * @param graph An instance of the problem.
+ * @param u Node u that we will explore each neighbours (if it hasn't been explored yet).
+ * @param depth An array filled with depth of each nodes.
  * 
  * @pre graph must be valid.
  */
@@ -50,7 +51,7 @@ static void browse(EdgeConGraph graph, int u, int depth[])
     {
         if (v != u && isEdge(graphInit, u, v) && depth[v] == - 1)
         {
-            if (isEdgeHeterogeneous(graph, u, v))
+            if (isTranslator(graph, u, v))
                 depth[v] = depth[u] + 1;
             else 
                 depth[v] = depth[u];
