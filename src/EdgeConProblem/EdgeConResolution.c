@@ -14,6 +14,7 @@
 #include "Graph.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 /**
  * @brief Compare each depth, stock and then return the highest value.
@@ -69,12 +70,11 @@ static void browse(EdgeConGraph graph, int u, int depth[])
  * @brief Get the highest cost of communication between two nodes with a set of choosen transducers.
  * 
  * @param graph An instance of the problem.
- * @param translators A set of transducers.
  * @return the maximal cost that cost that two nodes communicate with for the set of transducers translators.
  *
  * @pre graph must be valid.
  */
-static int getMaxPathLength(EdgeConGraph graph, int *translators)
+static int getMaxPathLength(EdgeConGraph graph)
 {
     int max = 0;
     Graph graphInit = getGraph(graph);
@@ -95,7 +95,6 @@ static int getMaxPathLength(EdgeConGraph graph, int *translators)
             max = maxDepth > max ? maxDepth : max;
         }
     }
-    printf("Result is : %d !\n", max);
     return max;
 }
 
@@ -111,25 +110,29 @@ static int nbTranslators(EdgeConGraph graph)
 
 static bool nextTranslatorSet(EdgeConGraph graph, int N, int n, int H_t, int **hE)
 {
-    while (nbTranslators(graph) != N)
+    do
     {
+        // printf("-------\n");
         for (int i = 0; i < H_t; i++)
         {
             int u = hE[0][i];
             int v = hE[1][i];
+            // printf("Index #%d: %d-%d\n", i, u, v);
             if (!isTranslator(graph, u, v))
             {
+                // printf("addTranslator\n");
                 addTranslator(graph, u, v);
                 break;
             }
             else
             {
+                // printf("removeTranslator\n");
                 removeTranslator(graph, u, v);
                 if (i == H_t - 1)
                     return false;
             }
         }
-    }
+    } while (nbTranslators(graph) != N);
     return true;
 }
 
@@ -162,7 +165,17 @@ int BruteForceEdgeCon(EdgeConGraph graph)
                 i++;
             }
 
-    nextTranslatorSet(graph, N, n, H_t, hE); // TODO: loop
-
-    printTranslator(graph);
+    int min = INT_MAX ;
+    while (true)
+    {
+        if (!nextTranslatorSet(graph, N, n, H_t, hE))
+            break;
+        int k = getMaxPathLength(graph);
+        if (k < min && k != 0)
+            min = k;
+        // printTranslator(graph);
+    }
+    resetTranslator(graph);
+    // printf("min: %d\n", min);
+    return min;
 }
