@@ -6,7 +6,7 @@
  * @brief An implementation of the Coca project for 2021 year. Converts a 2-coloured graph g and an integer k to a formula true if and only if it exists a translator set of minimal size which forces two nodes to communicate with cost strictly bigger than k.
  * Provides functions to generate the formula and the necessary variables, alongside function to decode a solution from a model of the formula.
  * @version 1
- * @date 2021-11-19
+ * @date 2021-11-26
  * 
  * @copyright Creative Commons
  * 

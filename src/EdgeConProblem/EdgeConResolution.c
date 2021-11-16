@@ -5,16 +5,16 @@
  * @author Bastien Soucasse
  * @brief  Algorithms to solve directly the EdgeCon problem
  * @version 1
- * @date 2021-11-19
+ * @date 2021-11-26
  * 
  * @copyright Creative Commons.
  * 
  */
 #include "EdgeConResolution.h"
 #include "Graph.h"
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
 
 /**
  * @brief Compare each depth, stock and then return the highest value.
@@ -41,8 +41,6 @@ static int computeMaxDepth(int numNodes, int depth[])
  * @param graph An instance of the problem.
  * @param u Node u that we will explore each neighbours (if it hasn't been explored yet).
  * @param depth An array filled with depth of each nodes.
- * 
- * @pre graph must be valid.
  */
 static void browse(EdgeConGraph graph, int u, int depth[])
 {
@@ -71,8 +69,6 @@ static void browse(EdgeConGraph graph, int u, int depth[])
  * 
  * @param graph An instance of the problem.
  * @return the maximal cost that cost that two nodes communicate with for the set of transducers translators.
- *
- * @pre graph must be valid.
  */
 static int getMaxPathLength(EdgeConGraph graph)
 {
@@ -98,6 +94,12 @@ static int getMaxPathLength(EdgeConGraph graph)
     return max;
 }
 
+/**
+ * @brief Computes the total number of translators in the graph.
+ * 
+ * @param graph An instance of the problem.
+ * @return The number of translators in @param graph.
+ */
 static int nbTranslators(EdgeConGraph graph)
 {
     int numOfTranslators = 0;
@@ -108,6 +110,16 @@ static int nbTranslators(EdgeConGraph graph)
     return numOfTranslators;
 }
 
+/**
+ * @brief Apply the next set of translators of size N in the graph.
+ * 
+ * @param graph An instance of the problem.
+ * @param N The number of translators we need to have.
+ * @param n The number of vertices in the graph.
+ * @param H_t The number of heterogeneous edges in the graph.
+ * @param hE The custom heteregeneous edges matrix.
+ * @return true if a next translator set has been found, false otherwise.
+ */
 static bool nextTranslatorSet(EdgeConGraph graph, int N, int n, int H_t, int **hE)
 {
     do
@@ -137,6 +149,33 @@ static bool nextTranslatorSet(EdgeConGraph graph, int N, int n, int H_t, int **h
 }
 
 /**
+ * @brief Creates the custom heterogeneous edges matrix.
+ * 
+ * @param graph An instance of the problem.
+ * @param n The number of vertices.
+ * @param H_t The number of heterogeneous edges.
+ * @return a pointer on the created matrix.
+ */
+static int **createHE(EdgeConGraph graph, int n, int H_t)
+{
+    int **hE = (int **)malloc(2 * sizeof(int *));
+    hE[0] = (int *)malloc(H_t * sizeof(int));
+    hE[1] = (int *)malloc(H_t * sizeof(int));
+
+    int i = 0;
+    for (int u = 0; u < n; u++)
+        for (int v = n - 1; v > u; v--)
+            if (isEdgeHeterogeneous(graph, u, v))
+            {
+                hE[0][i] = u;
+                hE[1][i] = v;
+                i++;
+            }
+    
+    return hE;
+}
+
+/**
  * @brief Brute Force Algorithm. If there is a result, the solution will be stored in @param graph, and its homogeneous components updated. If no solution, graph won't be modified. Returns the maximal cost of communication for any choice of translators.
  * 
  * @param graph An instance of the problem.
@@ -149,33 +188,18 @@ int BruteForceEdgeCon(EdgeConGraph graph)
     int n = orderG(getGraph(graph));           // Number of vertices
     int H_t = getNumHeteregeneousEdges(graph); // Number of heterogeneous edges
     int N = getNumComponents(graph) - 1;       // Number of homogeneous components
-    int *hE[2];                                // Heterogeneous edges saved
-    hE[0] = (int *)malloc(H_t * sizeof(int));
-    hE[1] = (int *)malloc(H_t * sizeof(int));
+    int **hE = createHE(graph, n, H_t);        // Heterogeneous edges custom
 
-    printf("n = %d, H_t = %d, N = %d\n", n, H_t, N);
-
-    int i = 0;
-    for (int u = 0; u < n; u++)
-        for (int v = n - 1; v > u; v--)
-            if (isEdgeHeterogeneous(graph, u, v))
-            {
-                hE[0][i] = u;
-                hE[1][i] = v;
-                i++;
-            }
-
-    int min = INT_MAX ;
-    while (true)
+    int min = INT_MAX;
+    while (nextTranslatorSet(graph, N, n, H_t, hE))
     {
-        if (!nextTranslatorSet(graph, N, n, H_t, hE))
-            break;
         int k = getMaxPathLength(graph);
         if (k < min && k != 0)
             min = k;
-        // printTranslator(graph);
     }
     resetTranslator(graph);
-    // printf("min: %d\n", min);
+
+    // printf("n = %d, H_t = %d, N = %d\n", n, H_t, N);
+    free(hE[0]), free(hE[1]), free(hE);
     return min;
 }
