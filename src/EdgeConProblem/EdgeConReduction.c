@@ -69,6 +69,28 @@ Z3_ast getVariableLevelInSpanningTree(Z3_context ctx, int level, int component)
     return mk_bool_var(ctx, name);
 }
 
+
+Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) 
+{
+    Z3_ast formula = Z3_mk_true(ctx);
+    for (int i = 0; i < size; i++)
+        for (int j = i + 1; j < size; j++)
+        {
+            Z3_ast clause = Z3_mk_or(ctx, Z3_mk_not(ctx, X[i]), Z3_mk_not(ctx, X[j]));
+            formula = Z3_mk_and(formula, clause);
+        }
+    return formula;
+}
+
+Z3_ast atLeast(Z3_context ctx, Z3_ast *X, int size) 
+{
+    Z3_ast formula = Z3_mk_false(ctx);
+    for (int i = 0; i < size; i++)
+        formula = Z3_mk_or(formula, X[i]);
+    return formula;
+}
+
+
 /**
  * @brief Generates a SAT formula satisfiable if and only if there is a set of translators of cost @p cost such that the graph admits a valid path between any two nodes.
  * 
