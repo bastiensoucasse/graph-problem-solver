@@ -1,4 +1,3 @@
-.vscode
 build
 doc
 src/parser/Lexer.c
