@@ -176,6 +176,18 @@ static int **createHE(EdgeConGraph graph, int n, int H_t)
 }
 
 /**
+ * @brief Frees the heterogeneous edges matrix.
+ * 
+ * @param hE The heterogeneous edges matrix.
+ */
+void freeHE(int **hE)
+{
+    for (int i = 0; i < 2; i++)
+        free(hE[i]), hE[i] = NULL;
+    free(hE), hE = NULL;
+}
+
+/**
  * @brief Brute Force Algorithm. If there is a result, the solution will be stored in @param graph, and its homogeneous components updated. If no solution, graph won't be modified. Returns the maximal cost of communication for any choice of translators.
  * 
  * @param graph An instance of the problem.
@@ -200,6 +212,6 @@ int BruteForceEdgeCon(EdgeConGraph graph)
     resetTranslator(graph);
 
     // printf("n = %d, H_t = %d, N = %d\n", n, H_t, N);
-    free(hE[0]), free(hE[1]), free(hE);
+    freeHE(hE);
     return min;
 }
