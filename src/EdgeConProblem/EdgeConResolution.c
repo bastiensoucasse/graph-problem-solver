@@ -3,7 +3,7 @@
  * @author Quentin Desire
  * @author Iantsa Provost
  * @author Bastien Soucasse
- * @brief  Algorithms to solve directly the EdgeCon problem
+ * @brief Algorithms to solve directly the EdgeCon problem
  * @version 1
  * @date 2021-11-26
  *
