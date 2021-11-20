@@ -100,7 +100,7 @@ Z3_ast **makeX(Z3_context ctx, EdgeConGraph g, int n, int H_t, int N) {
             if (isEdgeHeterogeneous(g, u, v)) {
                 for (int i = 0; i < N; i++) {
                     X[e][i] = getVariableIsIthTranslator(ctx, u, v, i);
-                    printf("Creating x_(%d,%d),%d…\n", u, v, i);
+                    // printf("Creating x_(%d,%d),%d…\n", u, v, i);
                 }
                 e++;
             }
@@ -134,7 +134,7 @@ Z3_ast **makeP(Z3_context ctx, EdgeConGraph g, int C_H) {
         for (int j2 = 0; j2 < C_H; j2++)
         {
             P[j1][j2] = getVariableParent(ctx, j1, j2);
-            printf("Creating p_%d,%d…\n", j1, j2);
+            // printf("Creating p_%d,%d…\n", j1, j2);
         }
 
     return P;
@@ -166,7 +166,7 @@ Z3_ast **makeL(Z3_context ctx, EdgeConGraph g, int C_H) {
     for (int j = 0; j < C_H; j++)
         for (int h = 0; h < C_H; h++) {
             L[j][h] = getVariableLevelInSpanningTree(ctx, h, j);
-            printf("Creating l_%d,%d…\n", j, h);
+            // printf("Creating l_%d,%d…\n", j, h);
         }
 
     return L;
@@ -286,20 +286,125 @@ Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
  * each homogeneous components has exactly one level.
  * 
  * @param ctx The solver context.
- * @param L The l_{j,h} set. 
+ * @param L The l_{i,h} set. 
  * @param C_H The number of homogeneous components.
  * @return The final formula phi3.
  */
 Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
     Z3_ast phi3 = Z3_mk_true(ctx);
 
-    for (int j = 0; j < C_H; j++) 
+    for (int i = 0; i < C_H; i++) 
     {
-        Z3_ast args_and[2] = {atLeast(ctx, L[j], C_H), atMost(ctx, L[j], C_H)};
+        Z3_ast args_and[2] = {atLeast(ctx, L[i], C_H), atMost(ctx, L[i], C_H)};
         Z3_ast args_phi3[2] = {phi3, Z3_mk_and(ctx, 2, args_and)};
         phi3 = Z3_mk_and(ctx, 2, args_phi3);
     }
     return phi3;
+}
+
+/**
+ * @brief Creates a formula that ensures that
+ * the tree has a depth stricly higher than cost.
+ * 
+ * @param ctx The solver context.
+ * @param L The l_{i,h} set.
+ * @param C_H The number of homogeneous components.
+ * @param cost 
+ * @return The final formula phi4.
+ */
+Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
+    Z3_ast phi4 = Z3_mk_false(ctx);
+
+    for(int i = 0; i < C_H; i++)
+    {
+        for(int j = cost; j < C_H; j++) {
+            Z3_ast args_or[2] = {phi4, L[i][j]};
+            phi4 = Z3_mk_or(ctx, 2, args_or);
+        }
+    }
+    return phi4;
+} 
+
+/**
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
+ * there exists at least one edge between them, and one of them is a translator.
+ * 
+ * @param ctx The solver context.
+ * @param graph The graph as an EdgeConGraph.
+ * @param X The x_e,i set.
+ * @param n The number of vertices.
+ * @param H_t The number of heterogeneous edges.
+ * @param N The number of translators.
+ * @param j1 The (index of the) first homogeneous component
+ * @param j2 The (index of the) second homogeneous component
+ * @return The final phi5 formula.
+ */
+Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int N, int j1, int j2) {
+    Z3_ast phi5 = Z3_mk_false(ctx);
+
+    int e = 0;
+    for (int u = 0; u < n; u++)
+            for (int v = n - 1; v > u; v--)
+                if (isEdgeHeterogeneous(graph, u, v))
+                {
+                    if (isNodeInComponent(graph, u, j1) && isNodeInComponent(graph, v, j2))
+                    {
+                        Z3_ast args_and[2] = {atLeast(ctx, X[e], N), atMost(ctx, X[e], N)};
+                        Z3_ast args_phi5[2] = {phi5, Z3_mk_and(ctx, 2, args_and)};
+                        phi5 = Z3_mk_or(ctx, 2, args_phi5);
+                    }
+                    e++;
+                }
+    
+    return phi5;
+}
+
+/**
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
+ * if X_j1 has a level of h, then X_j2 has a level of h-1.
+ * 
+ * @param ctx The solver context.
+ * @param L The l_{j,h} set. 
+ * @param C_H The number of homogeneous components.
+ * @param j1 The (index of the) first homogeneous component
+ * @param j2 The (index of the) second homogeneous component
+ * @return The final formula phi6.
+ */
+Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
+    Z3_ast phi6 = Z3_mk_false(ctx);
+    
+    for (int h = 1; h < C_H; h++)
+    {
+        Z3_ast args_or[2] = {phi6, Z3_mk_implies(ctx, L[j1][h], L[j2][h-1])};
+        phi6 = Z3_mk_or(ctx, 2, args_or);
+    }
+        
+    return phi6;
+}
+
+/**
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
+ * if X_j2 is parent of X_j1 then phi5 and phi6 are guaranteed.
+ * 
+ * @param ctx The solver context.
+ * @param graph A EdgeConGraph.
+ * @param X The x_{e,i} set. 
+ * @param n The number of vertices.
+ * @param H_t The number of heterogeneous components.
+ * @param N The number of translators.
+ * @param P The p_{j,j'} set.
+ * @param L The l_{j,h} set.
+ * @param C_H The number of homogeneous components.
+ * @param j1 The (index of the) first homogeneous component
+ * @param j2 The (index of the) second homogeneous component
+ * @return The final formula phi7.
+ * @pre graph must be an initialized EdgeConGraph with computed connected
+ * components.
+ */
+Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int N, Z3_ast **P,  Z3_ast **L, int C_H, int j1, int j2) {
+    Z3_ast args_and[2] = {phi5(ctx, graph, X, n, H_t, N, j1, j2),
+                          phi6(ctx, L, C_H, j1, j2)};
+    return Z3_mk_implies(ctx, P[j1][j2], Z3_mk_and(ctx, 2, args_and));
 }
 
 /**
@@ -334,34 +439,78 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     Z3_ast **L = makeL(ctx, graph, C_H);
 
     // phi1
-    Z3_ast varphi1 = phi1(ctx, X, H_t, N);
-    printf("phi1:\n%s\n", Z3_ast_to_string(ctx, varphi1));
-    Z3_lbool isvarPhi1Sat = isFormulaSat(ctx, varphi1);
-    if (isvarPhi1Sat == Z3_L_TRUE)
-        printf("phi1 is SAT\n");
-    else
-        printf("phi1 is not SAT\n");
+    // Z3_ast varphi1 = phi1(ctx, X, H_t, N);
+    // printf("phi1:\n%s\n", Z3_ast_to_string(ctx, varphi1));
+    // Z3_lbool isvarPhi1Sat = isFormulaSat(ctx, varphi1);
+    // if (isvarPhi1Sat == Z3_L_TRUE)
+    //     printf("phi1 is SAT\n");
+    // else
+    //     printf("phi1 is not SAT\n");
 
     // phi2
-    Z3_ast varphi2 = phi2(ctx, P, L, C_H);
-    printf("phi2:\n%s\n", Z3_ast_to_string(ctx, varphi2));
-    Z3_lbool isvarPhi2Sat = isFormulaSat(ctx, varphi2);
-    if (isvarPhi2Sat == Z3_L_TRUE)
-        printf("phi2 is SAT\n");
-    else
-        printf("phi2 is not SAT\n");
+    // Z3_ast varphi2 = phi2(ctx, P, L, C_H);
+    // printf("phi2:\n%s\n", Z3_ast_to_string(ctx, varphi2));
+    // Z3_lbool isvarPhi2Sat = isFormulaSat(ctx, varphi2);
+    // if (isvarPhi2Sat == Z3_L_TRUE)
+    //     printf("phi2 is SAT\n");
+    // else
+    //     printf("phi2 is not SAT\n");
 
     // phi3
-    Z3_ast varphi3 = phi3(ctx, L, C_H);
-    printf("phi3:\n%s\n", Z3_ast_to_string(ctx, varphi3));
-    Z3_lbool isvarPhi3Sat = isFormulaSat(ctx, varphi3);
-    if (isvarPhi3Sat == Z3_L_TRUE)
-        printf("phi3 is SAT\n");
-    else
-        printf("phi3 is not SAT\n");
+    // Z3_ast varphi3 = phi3(ctx, L, C_H);
+    // printf("phi3:\n%s\n", Z3_ast_to_string(ctx, varphi3));
+    // Z3_lbool isvarPhi3Sat = isFormulaSat(ctx, varphi3);
+    // if (isvarPhi3Sat == Z3_L_TRUE)
+    //     printf("phi3 is SAT\n");
+    // else
+    //     printf("phi3 is not SAT\n");
+
+    // phi4
+    // Z3_ast varphi4 = phi4(ctx, L, C_H, cost);
+    // printf("phi4:\n%s\n", Z3_ast_to_string(ctx, varphi4));
+    // Z3_lbool isvarPhi4Sat = isFormulaSat(ctx, varphi4);
+    // if (isvarPhi4Sat == Z3_L_TRUE)
+    //     printf("phi4 is SAT\n");
+    // else
+    //     printf("phi4 is not SAT\n");
+
+    // phi5
+    // int j1 = 0;
+    // int j2 = 1;
+    // Z3_ast varphi5 = phi5(ctx, graph, X, n, H_t, N, j1, j2);
+    // printf("phi5:\n%s\n", Z3_ast_to_string(ctx, varphi5));
+    // Z3_lbool isvarPhi5Sat = isFormulaSat(ctx, varphi5);
+    // if (isvarPhi5Sat == Z3_L_TRUE)
+    //     printf("phi5 is SAT\n");
+    // else
+    //     printf("phi5 is not SAT\n");
+
+    // phi6
+    // int j1 = 0;
+    // int j2 = 1;
+    // Z3_ast varphi6 = phi6(ctx, L, C_H, j1, j2);
+    // printf("phi6:\n%s\n", Z3_ast_to_string(ctx, varphi6));
+    // Z3_lbool isvarPhi6Sat = isFormulaSat(ctx, varphi6);
+    // if (isvarPhi6Sat == Z3_L_TRUE)
+    //     printf("phi6 is SAT\n");
+    // else
+    //     printf("phi6 is not SAT\n");
+
+    // phi7
+    // int j1 = 0;
+    // int j2 = 1;
+    // Z3_ast varphi7 = phi7(ctx, graph, X, n, H_t, N, P, L, C_H, j1, j2);
+    // printf("phi7:\n%s\n", Z3_ast_to_string(ctx, varphi7));
+    // Z3_lbool isvarPhi7Sat = isFormulaSat(ctx, varphi7);
+    // if (isvarPhi7Sat == Z3_L_TRUE)
+    //     printf("phi7 is SAT\n");
+    // else
+    //     printf("phi7 is not SAT\n");
 
     // Free and return
     freeX(X, H_t);
+    freeP(P, C_H);
+    freeL(L, C_H);
     return Z3_mk_true(ctx); // TODO…
 }
 
