@@ -93,15 +93,12 @@ Z3_ast getVariableLevelInSpanningTree(Z3_context ctx, int level,
 Z3_ast **makeX(Z3_context ctx, EdgeConGraph g, int n, int H_t, int N) {
     Z3_ast **X = (Z3_ast **)malloc(H_t * sizeof(Z3_ast *));
     for (int i = 0; i < H_t; i++) X[i] = (Z3_ast *)malloc(N * sizeof(Z3_ast));
-
     int e = 0;
     for (int u = 0; u < n; u++)
         for (int v = n - 1; v > u; v--)
             if (isEdgeHeterogeneous(g, u, v)) {
-                for (int i = 0; i < N; i++) {
+                for (int i = 0; i < N; i++)
                     X[e][i] = getVariableIsIthTranslator(ctx, u, v, i);
-                    // printf("Creating x_(%d,%d),%d…\n", u, v, i);
-                }
                 e++;
             }
     return X;
@@ -129,14 +126,9 @@ void freeX(Z3_ast **X, int H_t) {
 Z3_ast **makeP(Z3_context ctx, EdgeConGraph g, int C_H) {
     Z3_ast **P = (Z3_ast **)malloc(C_H * sizeof(Z3_ast *));
     for (int i = 0; i < C_H; i++) P[i] = (Z3_ast *)malloc(C_H * sizeof(Z3_ast));
-
     for (int j1 = 0; j1 < C_H; j1++)
         for (int j2 = 0; j2 < C_H; j2++)
-        {
             P[j1][j2] = getVariableParent(ctx, j1, j2);
-            // printf("Creating p_%d,%d…\n", j1, j2);
-        }
-
     return P;
 }
 
@@ -162,13 +154,9 @@ void freeP(Z3_ast **P, int C_H) {
 Z3_ast **makeL(Z3_context ctx, EdgeConGraph g, int C_H) {
     Z3_ast **L = (Z3_ast **)malloc(C_H * sizeof(Z3_ast *));
     for (int i = 0; i < C_H; i++) L[i] = (Z3_ast *)malloc(C_H * sizeof(Z3_ast));
-
     for (int j = 0; j < C_H; j++)
-        for (int h = 0; h < C_H; h++) {
+        for (int h = 0; h < C_H; h++)
             L[j][h] = getVariableLevelInSpanningTree(ctx, h, j);
-            // printf("Creating l_%d,%d…\n", j, h);
-        }
-
     return L;
 }
 
@@ -236,33 +224,27 @@ Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
 Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
     Z3_ast left = Z3_mk_true(ctx);
     Z3_ast right = Z3_mk_true(ctx);
-
     Z3_ast Xi[H_t];
-    for (int i = 0; i < N; i++)
-    {
+    for (int i = 0; i < N; i++) {
         // Retrieve every x_e,i with i settled (the column i)
         for (int e = 0; e < H_t; e++) Xi[e] = X[e][i];
 
         Z3_ast argsLeft[2] = {left, atMost(ctx, Xi, H_t)};
         left = Z3_mk_and(ctx, 2, argsLeft);
     }
-
-    for (int e = 0; e < H_t; e++)
-    {
+    for (int e = 0; e < H_t; e++) {
         Z3_ast argsRight[2] = {right, atMost(ctx, X[e], N)};
         right = Z3_mk_and(ctx, 2, argsRight);
     }
-
     Z3_ast args[2] = {left, right};
     return Z3_mk_and(ctx, 2, args);
 }
-
 
 /**
  * @brief Creates a formula that ensures that
  * each homogeneous component has one and only one parent
  * except the root.
- * 
+ *
  * @param ctx The solver context.
  * @param P The p_{j,j'} set.
  * @param L The l_{j,h} set.
@@ -271,8 +253,7 @@ Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
  */
 Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
     Z3_ast phi2 = Z3_mk_true(ctx);
-    for (int j = 0; j < C_H; j++)
-    {
+    for (int j = 0; j < C_H; j++) {
         Z3_ast args_and[2] = {atLeast(ctx, P[j], C_H), atMost(ctx, P[j], C_H)};
         Z3_ast args_or[2] = {L[j][0], Z3_mk_and(ctx, 2, args_and)};
         Z3_ast args_phi2[2] = {phi2, Z3_mk_or(ctx, 2, args_or)};
@@ -282,19 +263,17 @@ Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
 }
 
 /**
- * @brief Creates a formula that ensures that
- * each homogeneous components has exactly one level.
- * 
+ * @brief Creates a formula that ensures that each homogeneous components has
+ * exactly one level.
+ *
  * @param ctx The solver context.
- * @param L The l_{i,h} set. 
+ * @param L The l_{i,h} set.
  * @param C_H The number of homogeneous components.
  * @return The final formula phi3.
  */
 Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
     Z3_ast phi3 = Z3_mk_true(ctx);
-
-    for (int i = 0; i < C_H; i++) 
-    {
+    for (int i = 0; i < C_H; i++) {
         Z3_ast args_and[2] = {atLeast(ctx, L[i], C_H), atMost(ctx, L[i], C_H)};
         Z3_ast args_phi3[2] = {phi3, Z3_mk_and(ctx, 2, args_and)};
         phi3 = Z3_mk_and(ctx, 2, args_phi3);
@@ -303,32 +282,30 @@ Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
 }
 
 /**
- * @brief Creates a formula that ensures that
- * the tree has a depth stricly higher than cost.
- * 
+ * @brief Creates a formula that ensures that the tree has a depth stricly
+ * higher than cost.
+ *
  * @param ctx The solver context.
  * @param L The l_{i,h} set.
  * @param C_H The number of homogeneous components.
- * @param cost 
+ * @param cost
  * @return The final formula phi4.
  */
 Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
     Z3_ast phi4 = Z3_mk_false(ctx);
-
-    for(int i = 0; i < C_H; i++)
-    {
-        for(int j = cost; j < C_H; j++) {
+    for (int i = 0; i < C_H; i++)
+        for (int j = cost; j < C_H; j++) {
             Z3_ast args_or[2] = {phi4, L[i][j]};
             phi4 = Z3_mk_or(ctx, 2, args_or);
         }
-    }
     return phi4;
-} 
+}
 
 /**
- * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
- * there exists at least one edge between them, and one of them is a translator.
- * 
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous
+ * components, there exists at least one edge between them, and one of them is a
+ * translator.
+ *
  * @param ctx The solver context.
  * @param graph The graph as an EdgeConGraph.
  * @param X The x_e,i set.
@@ -338,33 +315,34 @@ Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
  * @param j1 The (index of the) first homogeneous component
  * @param j2 The (index of the) second homogeneous component
  * @return The final phi5 formula.
+ * @pre graph must be an initialized EdgeConGraph with computed connected
+ * components.
  */
-Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int N, int j1, int j2) {
+Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t,
+            int N, int j1, int j2) {
     Z3_ast phi5 = Z3_mk_false(ctx);
-
     int e = 0;
     for (int u = 0; u < n; u++)
-            for (int v = n - 1; v > u; v--)
-                if (isEdgeHeterogeneous(graph, u, v))
-                {
-                    if (isNodeInComponent(graph, u, j1) && isNodeInComponent(graph, v, j2))
-                    {
-                        Z3_ast args_and[2] = {atLeast(ctx, X[e], N), atMost(ctx, X[e], N)};
-                        Z3_ast args_phi5[2] = {phi5, Z3_mk_and(ctx, 2, args_and)};
-                        phi5 = Z3_mk_or(ctx, 2, args_phi5);
-                    }
-                    e++;
+        for (int v = n - 1; v > u; v--)
+            if (isEdgeHeterogeneous(graph, u, v)) {
+                if (isNodeInComponent(graph, u, j1) &&
+                    isNodeInComponent(graph, v, j2)) {
+                    Z3_ast args_and[2] = {atLeast(ctx, X[e], N),
+                                          atMost(ctx, X[e], N)};
+                    Z3_ast args_phi5[2] = {phi5, Z3_mk_and(ctx, 2, args_and)};
+                    phi5 = Z3_mk_or(ctx, 2, args_phi5);
                 }
-    
+                e++;
+            }
     return phi5;
 }
 
 /**
- * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
- * if X_j1 has a level of h, then X_j2 has a level of h-1.
- * 
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous
+ * components, if X_j1 has a level of h, then X_j2 has a level of h-1.
+ *
  * @param ctx The solver context.
- * @param L The l_{j,h} set. 
+ * @param L The l_{j,h} set.
  * @param C_H The number of homogeneous components.
  * @param j1 The (index of the) first homogeneous component
  * @param j2 The (index of the) second homogeneous component
@@ -372,28 +350,25 @@ Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int 
  */
 Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
     Z3_ast phi6 = Z3_mk_false(ctx);
-    
-    for (int h = 1; h < C_H; h++)
-    {
-        Z3_ast args_or[2] = {phi6, Z3_mk_implies(ctx, L[j1][h], L[j2][h-1])};
+    for (int h = 1; h < C_H; h++) {
+        Z3_ast args_or[2] = {phi6, Z3_mk_implies(ctx, L[j1][h], L[j2][h - 1])};
         phi6 = Z3_mk_or(ctx, 2, args_or);
     }
-        
     return phi6;
 }
 
 /**
- * @brief Creates a formula that ensures that, for a given couple of homogeneous components,
- * if X_j2 is parent of X_j1 then phi5 and phi6 are guaranteed.
- * 
+ * @brief Creates a formula that ensures that, for a given couple of homogeneous
+ * components, if X_j2 is parent of X_j1 then phi5 and phi6 are guaranteed.
+ *
  * @param ctx The solver context.
  * @param graph A EdgeConGraph.
- * @param X The x_{e,i} set. 
+ * @param X The x_{e,i} set.
+ * @param P The p_{j,j'} set.
+ * @param L The l_{j,h} set.
  * @param n The number of vertices.
  * @param H_t The number of heterogeneous components.
  * @param N The number of translators.
- * @param P The p_{j,j'} set.
- * @param L The l_{j,h} set.
  * @param C_H The number of homogeneous components.
  * @param j1 The (index of the) first homogeneous component
  * @param j2 The (index of the) second homogeneous component
@@ -401,7 +376,8 @@ Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
  * @pre graph must be an initialized EdgeConGraph with computed connected
  * components.
  */
-Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int N, Z3_ast **P,  Z3_ast **L, int C_H, int j1, int j2) {
+Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, Z3_ast **P,
+            Z3_ast **L, int n, int H_t, int N, int C_H, int j1, int j2) {
     Z3_ast args_and[2] = {phi5(ctx, graph, X, n, H_t, N, j1, j2),
                           phi6(ctx, L, C_H, j1, j2)};
     return Z3_mk_implies(ctx, P[j1][j2], Z3_mk_and(ctx, 2, args_and));
@@ -420,18 +396,14 @@ Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t, int 
  * components.
  */
 Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
-    // Z3_ast X[5];
-    // for (int i = 0; i < 5; i++)
-    //     X[i] = Z3_mk_true(ctx);
-    // return atMost(ctx, X, 5);
-    // ----------------------------
+    Z3_ast formula;
 
     // Initialize useful variables from graph
     int n = orderG(getGraph(graph));
-    int H_t = getNumHeteregeneousEdges(graph);
     int C_H = getNumComponents(graph);
+    int H_t = getNumHeteregeneousEdges(graph);
     int N = C_H - 1;
-    printf("n = %d, H_t = %d, C_H = %d, N = %d\n", n, H_t, C_H, N);
+    printf("n = %d, C_H = %d, H_t = %d, N = %d\n", n, C_H, H_t, N);
 
     // Initialize formula variables
     Z3_ast **X = makeX(ctx, graph, n, H_t, N);
@@ -507,11 +479,29 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     // else
     //     printf("phi7 is not SAT\n");
 
+    // Compute sub formulas
+    int numFormulas = 4 + C_H * (C_H - 1);
+    Z3_ast formulas[numFormulas];
+    formulas[0] = phi1(ctx, X, H_t, N);
+    formulas[1] = phi2(ctx, P, L, C_H);
+    formulas[2] = phi3(ctx, L, C_H);
+    formulas[3] = phi4(ctx, L, C_H, cost);
+    int i = 4;
+    for (int j1 = 0; j1 < C_H; j1++)
+        for (int j2 = 0; j2 < C_H; j2++)
+            if (j1 != j2)
+                formulas[i++] =
+                    phi7(ctx, graph, X, P, L, n, H_t, N, C_H, j1, j2);
+
+    // Compute final formula
+    formula = Z3_mk_and(ctx, numFormulas, formulas);
+    // printf("%s\n", Z3_ast_to_string(ctx, formula));
+
     // Free and return
     freeX(X, H_t);
     freeP(P, C_H);
     freeL(L, C_H);
-    return Z3_mk_true(ctx); // TODO…
+    return formula;
 }
 
 /**
