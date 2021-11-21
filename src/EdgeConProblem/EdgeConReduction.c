@@ -625,5 +625,10 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
  */
 void getTranslatorSetFromModel(Z3_context ctx, Z3_model model,
                                EdgeConGraph graph) {
+    // En gros, décode le modèle de la formule pour générer l’ensemble des
+    // convertisseurs…
+    // Donc on doit mettre les convertisseurs du graphe selon le modèle
+    // résultant de la formule.
+
     return;
 }
