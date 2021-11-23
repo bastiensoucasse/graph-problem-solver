@@ -175,8 +175,7 @@ int BruteForceEdgeCon(EdgeConGraph graph) {
     int N = getNumComponents(graph) - 1;  // Number of homogeneous components
     int **hE = createHE(graph, n, H_t);   // Heterogeneous edges custom
 
-    for (int e = 0; e < N; e++)
-        addTranslator(graph, hE[0][e], hE[1][e]);
+    for (int e = 0; e < N; e++) addTranslator(graph, hE[0][e], hE[1][e]);
 
     do {
         int k = getMaxPathLength(graph);

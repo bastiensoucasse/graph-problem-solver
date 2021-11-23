@@ -1,6 +1,6 @@
 #!/bin/bash
 
 make &> /dev/null \
-    && ./graphProblemSolver -R 2 -F -f -o star graphs/star.dot \
-    && dot -Tjpg -o sol/star_Sat.jpg sol/star_Sat.dot \
-    && echo "Resulting graph is sol/star_Sat.jpg"
+    && ./graphProblemSolver -R 2 -F -f -o bipartite graphs/bipartite.dot \
+    && dot -Tjpg -o sol/bipartite_Sat.jpg sol/bipartite_Sat.dot \
+    && echo "Resulting graph is sol/bipartite_Sat.jpg"
