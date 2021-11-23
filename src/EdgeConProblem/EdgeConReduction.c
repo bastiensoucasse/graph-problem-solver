@@ -234,7 +234,7 @@ static Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
             args[1] = clause;
             formula = Z3_mk_and(ctx, 2, args);
         }
-    
+
     return formula;
 }
 
@@ -279,8 +279,6 @@ static Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
 
         // Add the other ones by adding an AND before each
         Z3_ast argsRight[2] = {right, atMost(ctx, X[e], N)};
-        printf("%s\n", Z3_ast_to_string(ctx, right));
-        printf("%s\n", Z3_ast_to_string(ctx, argsRight[0]));
         right = Z3_mk_and(ctx, 2, argsRight);
     }
 
@@ -502,19 +500,17 @@ static Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, Z3_ast **P,
  */
 Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     Z3_ast formula;
-    
+
     // Initialize useful variables from graph
     int n = orderG(getGraph(graph));
     int C_H = getNumComponents(graph);
     int H_t = getNumHeteregeneousEdges(graph);
     int N = C_H - 1;
 
-
     // Initialize formula variables
     Z3_ast **X = makeX(ctx, graph, n, H_t, N);
     Z3_ast **P = makeP(ctx, graph, C_H);
     Z3_ast **L = makeL(ctx, graph, C_H);
-
 
     // Compute sub formulas
     int numFormulas = 4 + C_H * (C_H - 1);
@@ -522,7 +518,7 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     formulas[0] = phi1(ctx, X, H_t, N);
     formulas[1] = phi2(ctx, P, L, C_H);
     formulas[2] = phi3(ctx, L, C_H);
-    formulas[3] = phi4(ctx, L, C_H, cost);
+    formulas[3] = Z3_mk_not(ctx, phi4(ctx, L, C_H, cost));
     int i = 4;
     for (int j1 = 0; j1 < C_H; j1++)
         for (int j2 = 0; j2 < C_H; j2++)
@@ -532,7 +528,6 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
 
     // Compute final formula
     formula = Z3_mk_and(ctx, numFormulas, formulas);
-
 
     // Free
     freeX(X, H_t);
