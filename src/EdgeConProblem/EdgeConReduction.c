@@ -24,10 +24,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "EdgeConUtils.h"
 #include "Z3Tools.h"
-
-// Uncomment this to debug each subformula
-// #define DEBUG
 
 /**
  * @brief Creates a variable representing that the edge (@p node1, @p node2) has
@@ -93,7 +91,7 @@ Z3_ast getVariableLevelInSpanningTree(Z3_context ctx, int level,
  * @param N The number of translators.
  * @return The set of x_{e,i} created.
  */
-Z3_ast **makeX(Z3_context ctx, EdgeConGraph g, int n, int H_t, int N) {
+static Z3_ast **makeX(Z3_context ctx, EdgeConGraph g, int n, int H_t, int N) {
     Z3_ast **X = (Z3_ast **)malloc(H_t * sizeof(Z3_ast *));
     for (int e = 0; e < H_t; e++) X[e] = (Z3_ast *)malloc(N * sizeof(Z3_ast));
 
@@ -115,7 +113,7 @@ Z3_ast **makeX(Z3_context ctx, EdgeConGraph g, int n, int H_t, int N) {
  * @param X The set of x_{e,i}.
  * @param H_t The number of heterogenous edges.
  */
-void freeX(Z3_ast **X, int H_t) {
+static void freeX(Z3_ast **X, int H_t) {
     for (int e = 0; e < H_t; e++) free(X[e]), X[e] = NULL;
     free(X), X = NULL;
 }
@@ -128,7 +126,7 @@ void freeX(Z3_ast **X, int H_t) {
  * @param C_H The number of homogeneous components.
  * @return The set of p_{i,j} created.
  */
-Z3_ast **makeP(Z3_context ctx, EdgeConGraph g, int C_H) {
+static Z3_ast **makeP(Z3_context ctx, EdgeConGraph g, int C_H) {
     Z3_ast **P = (Z3_ast **)malloc(C_H * sizeof(Z3_ast *));
     for (int j1 = 0; j1 < C_H; j1++)
         P[j1] = (Z3_ast *)malloc(C_H * sizeof(Z3_ast));
@@ -146,7 +144,7 @@ Z3_ast **makeP(Z3_context ctx, EdgeConGraph g, int C_H) {
  * @param X The set of p_{i,j}.
  * @param H_t The number of heterogenous edges.
  */
-void freeP(Z3_ast **P, int C_H) {
+static void freeP(Z3_ast **P, int C_H) {
     for (int j1 = 0; j1 < C_H; j1++) free(P[j1]), P[j1] = NULL;
     free(P), P = NULL;
 }
@@ -159,7 +157,7 @@ void freeP(Z3_ast **P, int C_H) {
  * @param C_H The number of homogeneous components.
  * @return The set of l_{j,h} created.
  */
-Z3_ast **makeL(Z3_context ctx, EdgeConGraph g, int C_H) {
+static Z3_ast **makeL(Z3_context ctx, EdgeConGraph g, int C_H) {
     Z3_ast **L = (Z3_ast **)malloc(C_H * sizeof(Z3_ast *));
     for (int j = 0; j < C_H; j++) L[j] = (Z3_ast *)malloc(C_H * sizeof(Z3_ast));
 
@@ -176,7 +174,7 @@ Z3_ast **makeL(Z3_context ctx, EdgeConGraph g, int C_H) {
  * @param L The set of l_{e,i}.
  * @param C_H The number of homogeneous components.
  */
-void freeL(Z3_ast **L, int C_H) {
+static void freeL(Z3_ast **L, int C_H) {
     for (int j = 0; j < C_H; j++) free(L[j]), L[j] = NULL;
     free(L), L = NULL;
 }
@@ -189,7 +187,7 @@ void freeL(Z3_ast **L, int C_H) {
  * @param size The size of the set of x_{e,i}.
  * @return The final formula.
  */
-Z3_ast atLeast(Z3_context ctx, Z3_ast *X, int size) {
+static Z3_ast atLeast(Z3_context ctx, Z3_ast *X, int size) {
     Z3_ast formula;
 
     for (int i = 0; i < size; i++) {
@@ -215,7 +213,9 @@ Z3_ast atLeast(Z3_context ctx, Z3_ast *X, int size) {
  * @param size The size of the set of x_{e,i}.
  * @return The final formula.
  */
-Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
+static Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
+    return Z3_mk_atmost(ctx, size, X, 1);
+
     Z3_ast formula;
 
     for (int i = 0; i < size; i++)
@@ -234,7 +234,7 @@ Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
             args[1] = clause;
             formula = Z3_mk_and(ctx, 2, args);
         }
-
+    
     return formula;
 }
 
@@ -249,7 +249,7 @@ Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
  * @param N The max number of translators.
  * @return The final formula phi1.
  */
-Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
+static Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
     Z3_ast left, right;
 
     // Left part of the big AND
@@ -279,6 +279,8 @@ Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
 
         // Add the other ones by adding an AND before each
         Z3_ast argsRight[2] = {right, atMost(ctx, X[e], N)};
+        printf("%s\n", Z3_ast_to_string(ctx, right));
+        printf("%s\n", Z3_ast_to_string(ctx, argsRight[0]));
         right = Z3_mk_and(ctx, 2, argsRight);
     }
 
@@ -297,7 +299,7 @@ Z3_ast phi1(Z3_context ctx, Z3_ast **X, int H_t, int N) {
  * @param C_H The number of homogeneous components.
  * @return The final formula phi2.
  */
-Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
+static Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
     Z3_ast phi2;
 
     for (int j1 = 0; j1 < C_H; j1++) {
@@ -330,7 +332,7 @@ Z3_ast phi2(Z3_context ctx, Z3_ast **P, Z3_ast **L, int C_H) {
  * @param C_H The number of homogeneous components.
  * @return The final formula phi3.
  */
-Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
+static Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
     Z3_ast phi3;
 
     for (int j = 0; j < C_H; j++) {
@@ -361,7 +363,7 @@ Z3_ast phi3(Z3_context ctx, Z3_ast **L, int C_H) {
  * @param cost The cost of the translator set.
  * @return The final formula phi4.
  */
-Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
+static Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
     // If the cost is bigger than the number of homogeneous components we won't
     // find anything
     if (cost + 1 >= C_H) return Z3_mk_false(ctx);
@@ -401,8 +403,8 @@ Z3_ast phi4(Z3_context ctx, Z3_ast **L, int C_H, int cost) {
  * @pre graph must be an initialized EdgeConGraph with computed connected
  * components.
  */
-Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t,
-            int N, int j1, int j2) {
+static Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n,
+                   int H_t, int N, int j1, int j2) {
     Z3_ast phi5;
 
     int e = 0, num = 0;
@@ -444,7 +446,7 @@ Z3_ast phi5(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, int n, int H_t,
  * @param j2 The (index of the) second homogeneous component
  * @return The final formula phi6.
  */
-Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
+static Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
     Z3_ast phi6;
 
     for (int h = 1; h < C_H; h++) {
@@ -479,8 +481,8 @@ Z3_ast phi6(Z3_context ctx, Z3_ast **L, int C_H, int j1, int j2) {
  * @pre graph must be an initialized EdgeConGraph with computed connected
  * components.
  */
-Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, Z3_ast **P,
-            Z3_ast **L, int n, int H_t, int N, int C_H, int j1, int j2) {
+static Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, Z3_ast **P,
+                   Z3_ast **L, int n, int H_t, int N, int C_H, int j1, int j2) {
     Z3_ast args_and[2] = {phi5(ctx, graph, X, n, H_t, N, j1, j2),
                           phi6(ctx, L, C_H, j1, j2)};
     return Z3_mk_implies(ctx, P[j1][j2], Z3_mk_and(ctx, 2, args_and));
@@ -500,85 +502,20 @@ Z3_ast phi7(Z3_context ctx, EdgeConGraph graph, Z3_ast **X, Z3_ast **P,
  */
 Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     Z3_ast formula;
-
+    
     // Initialize useful variables from graph
     int n = orderG(getGraph(graph));
     int C_H = getNumComponents(graph);
     int H_t = getNumHeteregeneousEdges(graph);
     int N = C_H - 1;
 
+
     // Initialize formula variables
     Z3_ast **X = makeX(ctx, graph, n, H_t, N);
     Z3_ast **P = makeP(ctx, graph, C_H);
     Z3_ast **L = makeL(ctx, graph, C_H);
 
-#ifdef DEBUG
-    int j1 = 0;
-    int j2 = 1;
 
-    // phi1
-    Z3_ast varphi1 = phi1(ctx, X, H_t, N);
-    printf("phi1:\n%s\n", Z3_ast_to_string(ctx, varphi1));
-    Z3_lbool isvarPhi1Sat = isFormulaSat(ctx, varphi1);
-    if (isvarPhi1Sat == Z3_L_TRUE)
-        printf("phi1 is SAT\n");
-    else
-        printf("phi1 is not SAT\n");
-
-    // phi2
-    Z3_ast varphi2 = phi2(ctx, P, L, C_H);
-    printf("phi2:\n%s\n", Z3_ast_to_string(ctx, varphi2));
-    Z3_lbool isvarPhi2Sat = isFormulaSat(ctx, varphi2);
-    if (isvarPhi2Sat == Z3_L_TRUE)
-        printf("phi2 is SAT\n");
-    else
-        printf("phi2 is not SAT\n");
-
-    // phi3
-    Z3_ast varphi3 = phi3(ctx, L, C_H);
-    printf("phi3:\n%s\n", Z3_ast_to_string(ctx, varphi3));
-    Z3_lbool isvarPhi3Sat = isFormulaSat(ctx, varphi3);
-    if (isvarPhi3Sat == Z3_L_TRUE)
-        printf("phi3 is SAT\n");
-    else
-        printf("phi3 is not SAT\n");
-
-    // phi4
-    Z3_ast varphi4 = phi4(ctx, L, C_H, cost);
-    printf("phi4:\n%s\n", Z3_ast_to_string(ctx, varphi4));
-    Z3_lbool isvarPhi4Sat = isFormulaSat(ctx, varphi4);
-    if (isvarPhi4Sat == Z3_L_TRUE)
-        printf("phi4 is SAT\n");
-    else
-        printf("phi4 is not SAT\n");
-
-    // phi5
-    Z3_ast varphi5 = phi5(ctx, graph, X, n, H_t, N, j1, j2);
-    printf("phi5:\n%s\n", Z3_ast_to_string(ctx, varphi5));
-    Z3_lbool isvarPhi5Sat = isFormulaSat(ctx, varphi5);
-    if (isvarPhi5Sat == Z3_L_TRUE)
-        printf("phi5 is SAT\n");
-    else
-        printf("phi5 is not SAT\n");
-
-    // phi6
-    Z3_ast varphi6 = phi6(ctx, L, C_H, j1, j2);
-    printf("phi6:\n%s\n", Z3_ast_to_string(ctx, varphi6));
-    Z3_lbool isvarPhi6Sat = isFormulaSat(ctx, varphi6);
-    if (isvarPhi6Sat == Z3_L_TRUE)
-        printf("phi6 is SAT\n");
-    else
-        printf("phi6 is not SAT\n");
-
-    // phi7
-    Z3_ast varphi7 = phi7(ctx, graph, X, P, L, n, H_t, N, C_H, j1, j2);
-    printf("phi7:\n%s\n", Z3_ast_to_string(ctx, varphi7));
-    Z3_lbool isvarPhi7Sat = isFormulaSat(ctx, varphi7);
-    if (isvarPhi7Sat == Z3_L_TRUE)
-        printf("phi7 is SAT\n");
-    else
-        printf("phi7 is not SAT\n");
-#else
     // Compute sub formulas
     int numFormulas = 4 + C_H * (C_H - 1);
     Z3_ast formulas[numFormulas];
@@ -595,19 +532,14 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
 
     // Compute final formula
     formula = Z3_mk_and(ctx, numFormulas, formulas);
-    printf("%s\n", Z3_ast_to_string(ctx, formula));
-#endif  // DEBUG
+
 
     // Free
     freeX(X, H_t);
     freeP(P, C_H);
     freeL(L, C_H);
 
-#ifdef DEBUG
-    return Z3_mk_false(ctx);
-#else
     return formula;
-#endif  // DEBUG
 }
 
 /**
@@ -625,10 +557,25 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
  */
 void getTranslatorSetFromModel(Z3_context ctx, Z3_model model,
                                EdgeConGraph graph) {
-    // En gros, décode le modèle de la formule pour générer l’ensemble des
-    // convertisseurs…
-    // Donc on doit mettre les convertisseurs du graphe selon le modèle
-    // résultant de la formule.
+    // Initialize useful variables from graph
+    int n = orderG(getGraph(graph));
+    int C_H = getNumComponents(graph);
+    int H_t = getNumHeteregeneousEdges(graph);
+    int N = C_H - 1;
 
-    return;
+    // Initialize x_e,i formula variables
+    Z3_ast **X = makeX(ctx, graph, n, H_t, N);
+
+    int e = 0;
+    for (int u = 0; u < n; u++)
+        for (int v = u + 1; v < n; v++)
+            if (isEdgeHeterogeneous(graph, u, v)) {
+                for (int i = 0; i < N; i++)
+                    if (valueOfVarInModel(ctx, model, X[e][i]))
+                        addTranslator(graph, u, v);
+                e++;
+            }
+
+    // Free
+    freeX(X, H_t);
 }

@@ -1,5 +1,6 @@
 build
 doc
+sol
 src/parser/Lexer.c
 src/parser/Lexer.h
 src/parser/Parser.c

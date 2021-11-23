@@ -1,0 +1,6 @@
+#!/bin/bash
+
+make &> /dev/null \
+    && ./graphProblemSolver -R 1 -F -M -v -f -o bipartite graphs/bipartite.dot \
+    && dot -Tjpg -o sol/bipartite_Sat.jpg sol/bipartite_Sat.dot \
+    && echo "Resulting graph is sol/bipartite_Sat.jpg"
