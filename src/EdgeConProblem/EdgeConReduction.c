@@ -518,7 +518,8 @@ Z3_ast EdgeConReduction(Z3_context ctx, EdgeConGraph graph, int cost) {
     formulas[0] = phi1(ctx, X, H_t, N);
     formulas[1] = phi2(ctx, P, L, C_H);
     formulas[2] = phi3(ctx, L, C_H);
-    formulas[3] = Z3_mk_not(ctx, phi4(ctx, L, C_H, cost));
+    formulas[3] =
+        Z3_mk_not(ctx, phi4(ctx, L, C_H, cost));  // Thanks to Iantsa :)
     int i = 4;
     for (int j1 = 0; j1 < C_H; j1++)
         for (int j2 = 0; j2 < C_H; j2++)
