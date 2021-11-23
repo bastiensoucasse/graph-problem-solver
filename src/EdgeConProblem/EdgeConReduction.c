@@ -214,7 +214,7 @@ static Z3_ast atLeast(Z3_context ctx, Z3_ast *X, int size) {
  * @return The final formula.
  */
 static Z3_ast atMost(Z3_context ctx, Z3_ast *X, int size) {
-    return Z3_mk_atmost(ctx, size, X, 1);
+    // return Z3_mk_atmost(ctx, size, X, 1);
 
     Z3_ast formula;
 
